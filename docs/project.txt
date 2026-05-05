@@ -1,0 +1,9 @@
+As part of your assessment, you will be expected to complete a group project that involves implementing a distributed system that demonstrates your understanding of the technologies presented in the module.
+
+You can implement any system you wish to, but must remember that the focus of the project is on architectural design and use of distribution technology. It is expected that the project you develop is implemented using the Microservices Architectural Style. You will be evaluated across a number of aspects of the project, including but not limited to: use of microservices design patterns, good use of REST (including HATEOAS) and Event Driven approaches, adoption of appropriate additional technologies. From a practical perspective, your design must demonstrate how your system can scale to meet demand and how it has been designed for resilience (to continue operating in the presence of failure). The look and feel of your UI will have little impact on the final grade and should be de-emphasised. I will release a Grading Rubric later in the trimester with details on how this will be assessed.
+
+At this stage, I am inviting you to form and register your groups. For this, you need a team of up to 3 people, a team name, and a GitLab.com username that I will use to create a Git repo for your team. 
+
+NOTE: The Git Repo will be hosted as a sub-repository of https://gitlab.com/ucd-cs-rem (not UCDs gitlab deployment). I have obtained an educational license for this repository that gives me unlimited users and unlimited projects (it also is a fully provisioned under a free a Ultimate SaaS Plan).
+
+YOU MUST SUBMIT YOUR FINAL PROJECT VIA THIS GITLAB REPOSITORY FOR IT TO BE ASSESSED. If you put your code in your own repository, I will not be able to find it (I will not even go looking for it, you will just get a NM or ABS grade for the project).

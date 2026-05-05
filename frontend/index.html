@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HayBale</title>
+  <style>
+    body { font-family: monospace; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    h2 { border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+    input, textarea { width: 100%; margin: 4px 0; padding: 4px; box-sizing: border-box; }
+    button { margin: 4px 2px; padding: 6px 12px; cursor: pointer; }
+    select { width: 100%; margin: 4px 0; padding: 4px; }
+    #log { background: #f4f4f4; padding: 10px; height: 200px; overflow-y: auto; white-space: pre-wrap; font-size: 12px; }
+    .section { margin-bottom: 30px; }
+    .row { display: flex; gap: 10px; }
+    .row > * { flex: 1; }
+  </style>
+</head>
+<body>
+
+<h1>🌾 HayBale</h1>
+
+<div class="section">
+  <h2>Users</h2>
+  <div class="row">
+    <input id="userName" placeholder="Name" />
+    <input id="userEmail" placeholder="Email" />
+    <button onclick="createUser()">Create User</button>
+  </div>
+  <button onclick="loadUsers()">Refresh Users</button>
+  <div id="userList"></div>
+</div>
+
+<div class="section">
+  <h2>Restaurants</h2>
+  <div class="row">
+    <input id="restName" placeholder="Name" />
+    <input id="restAddress" placeholder="Address" />
+    <input id="restCuisine" placeholder="Cuisine" />
+  </div>
+  <input id="restMenu" placeholder="Menu items (comma separated, e.g. Pizza,Pasta,Salad)" />
+  <button onclick="createRestaurant()">Create Restaurant</button>
+  <button onclick="loadRestaurants()">Refresh Restaurants</button>
+  <div id="restaurantList"></div>
+</div>
+
+<div class="section">
+  <h2>Place Order</h2>
+  <div class="row">
+    <select id="orderUserId"><option value="">-- Select User --</option></select>
+    <select id="orderRestaurantId"><option value="">-- Select Restaurant --</option></select>
+  </div>
+  <input id="orderItems" placeholder="Items (comma separated)" />
+  <button onclick="placeOrder()">Place Order</button>
+</div>
+
+<div class="section">
+  <h2>Orders</h2>
+  <button onclick="loadOrders()">Refresh Orders</button>
+  <div id="log"></div>
+</div>
+
+<script>
+  const ORDERS = 'http://localhost:8080';
+  const USERS  = 'http://localhost:8081';
+  const RESTS  = 'http://localhost:8082';
+
+  function log(msg) {
+    const el = document.getElementById('log');
+    el.textContent += msg + '\n';
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async function createUser() {
+    const name  = document.getElementById('userName').value;
+    const email = document.getElementById('userEmail').value;
+    const res = await fetch(`${USERS}/users`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email })
+    });
+    const data = await res.json();
+    log(`✅ Created user: ${data.name} (id=${data.id})`);
+    loadUsers();
+  }
+
+  async function loadUsers() {
+    const res = await fetch(`${USERS}/users`);
+    const links = await res.json();
+    const users = await Promise.all(links.map(url => fetch(url).then(r => r.json())));
+    const select = document.getElementById('orderUserId');
+    select.innerHTML = '<option value="">-- Select User --</option>';
+    document.getElementById('userList').innerHTML =
+      users.map(u => `[${u.id}] ${u.name} — ${u.email}`).join('<br>');
+    users.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      opt.text = `[${u.id}] ${u.name}`;
+      select.appendChild(opt);
+    });
+  }
+
+  async function createRestaurant() {
+    const name    = document.getElementById('restName').value;
+    const address = document.getElementById('restAddress').value;
+    const cuisine = document.getElementById('restCuisine').value;
+    const menu    = document.getElementById('restMenu').value.split(',').map(s => s.trim());
+    const res = await fetch(`${RESTS}/restaurants`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, address, cuisine, menu })
+    });
+    const data = await res.json();
+    log(`✅ Created restaurant: ${data.name} (id=${data.id})`);
+    loadRestaurants();
+  }
+
+  async function loadRestaurants() {
+    const res = await fetch(`${RESTS}/restaurants`);
+    const links = await res.json();
+    const rests = await Promise.all(links.map(url => fetch(url).then(r => r.json())));
+    const select = document.getElementById('orderRestaurantId');
+    select.innerHTML = '<option value="">-- Select Restaurant --</option>';
+    document.getElementById('restaurantList').innerHTML =
+      rests.map(r => `[${r.id}] ${r.name} — ${r.cuisine} — ${r.address}`).join('<br>');
+    rests.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.id;
+      opt.text = `[${r.id}] ${r.name}`;
+      select.appendChild(opt);
+    });
+  }
+
+  async function placeOrder() {
+    const userId       = parseInt(document.getElementById('orderUserId').value);
+    const restaurantId = parseInt(document.getElementById('orderRestaurantId').value);
+    const items        = document.getElementById('orderItems').value.split(',').map(s => s.trim());
+    if (!userId || !restaurantId) { alert('Select a user and restaurant first'); return; }
+    const res = await fetch(`${ORDERS}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, restaurantId, items })
+    });
+    if (res.status === 201) {
+      const data = await res.json();
+      log(`🛒 Order placed! id=${data.id}, user=${data.userId}, restaurant=${data.restaurantId}, status=${data.status}`);
+      log(`   📬 Notification sent → check: docker-compose logs notification-service`);
+    } else if (res.status === 400) {
+      log(`❌ Order failed — one or more items are not on the restaurant's menu`);
+    } else if (res.status === 404) {
+      log(`❌ Order failed — user or restaurant not found`);
+    } else {
+      log(`❌ Order failed (${res.status})`);
+    }
+  }
+
+  async function loadOrders() {
+    const res = await fetch(`${ORDERS}/orders`);
+    const links = await res.json();
+    const el = document.getElementById('log');
+    el.textContent = '';
+    if (links.length === 0) { el.textContent = '(no orders yet)'; return; }
+    const orders = await Promise.all(links.map(url => fetch(url).then(r => r.json())));
+    orders.forEach(o => {
+      el.textContent += `Order #${o.id} — user=${o.userId} restaurant=${o.restaurantId} status=${o.status} items=${o.items}\n`;
+    });
+  }
+
+  loadUsers();
+  loadRestaurants();
+</script>
+
+</body>
+</html>
